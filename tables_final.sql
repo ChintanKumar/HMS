@@ -56,7 +56,8 @@ CREATE TABLE Schedule(
     endtime TIME NOT NULL,                             -- End time of the doctor's shift
     breaktime TIME NOT NULL,                           -- Break time during the shift
     day VARCHAR(20) NOT NULL,                          -- Day of the week
-    PRIMARY KEY (id, starttime, endtime, breaktime, day)
+    PRIMARY KEY (id, starttime, endtime, breaktime, day),
+    UNIQUE (id)                                        -- Ensuring id is unique
 );
 
 -- Creating PatientsFillHistory Table
