@@ -1,6 +1,6 @@
 DROP DATABASE IF EXISTS HMS;
 
-CREATE DATABASE if not exists HMS;
+CREATE DATABASE IF NOT EXISTS HMS;
 USE HMS;
 
 -- Creating Patient Table
@@ -14,8 +14,8 @@ CREATE TABLE Patient(
 
 -- Creating MedicalHistory Table
 CREATE TABLE MedicalHistory(
-    id INT PRIMARY KEY,                                -- Unique identifier for medical history
-    date DATE NOT NULL,                                -- Date of record entry
+    id INT PRIMARY KEY,                               -- Unique identifier for medical history
+    date DATE NOT NULL,                               -- Date of record entry
     conditions VARCHAR(100) NOT NULL,                 -- List of medical conditions
     surgeries VARCHAR(100) NOT NULL,                  -- List of previous surgeries
     medication VARCHAR(100) NOT NULL                  -- List of prescribed medications
@@ -26,7 +26,7 @@ CREATE TABLE Doctor(
     email VARCHAR(50) PRIMARY KEY,                    -- Unique identifier for each doctor (email-based)
     gender VARCHAR(20) NOT NULL,                      -- Doctor's gender
     password VARCHAR(30) NOT NULL,                    -- Password for doctor login
-    name VARCHAR(50) NOT NULL                          -- Doctor's full name
+    name VARCHAR(50) NOT NULL                         -- Doctor's full name
 );
 
 -- Creating Appointment Table
@@ -41,7 +41,7 @@ CREATE TABLE Appointment(
 -- Creating PatientsAttendAppointments Table
 CREATE TABLE PatientsAttendAppointments(
     patient VARCHAR(50) NOT NULL,                     -- Email of the patient attending the appointment
-    appt INT NOT NULL,                                 -- Appointment ID
+    appt INT NOT NULL,                                -- Appointment ID
     concerns VARCHAR(40) NOT NULL,                    -- Patient's concerns for the appointment
     symptoms VARCHAR(40) NOT NULL,                    -- Symptoms reported by the patient
     FOREIGN KEY (patient) REFERENCES Patient (email) ON DELETE CASCADE,
@@ -56,21 +56,22 @@ CREATE TABLE Schedule(
     endtime TIME NOT NULL,                             -- End time of the doctor's shift
     breaktime TIME NOT NULL,                           -- Break time during the shift
     day VARCHAR(20) NOT NULL,                          -- Day of the week
-    PRIMARY KEY (id, starttime, endtime, breaktime, day)
+    PRIMARY KEY (id, starttime, endtime, breaktime, day),
+    UNIQUE (id)                                        -- Ensuring id is unique
 );
 
 -- Creating PatientsFillHistory Table
 CREATE TABLE PatientsFillHistory(
     patient VARCHAR(50) NOT NULL,                     -- Email of the patient filling the history
-    history INT NOT NULL,                              -- Medical History ID
+    history INT NOT NULL,                             -- Medical History ID
     FOREIGN KEY (patient) REFERENCES Patient (email) ON DELETE CASCADE,
     FOREIGN KEY (history) REFERENCES MedicalHistory (id) ON DELETE CASCADE,
-    PRIMARY KEY (history)
+    PRIMARY KEY (patient, history)                    -- Updated to composite primary key
 );
 
 -- Creating Diagnose Table
 CREATE TABLE Diagnose(
-    appt INT NOT NULL,                                 -- Appointment ID
+    appt INT NOT NULL,                                -- Appointment ID
     doctor VARCHAR(50) NOT NULL,                      -- Email of the diagnosing doctor
     diagnosis VARCHAR(40) NOT NULL,                   -- Diagnosis details
     prescription VARCHAR(50) NOT NULL,                -- Prescription details
@@ -81,7 +82,7 @@ CREATE TABLE Diagnose(
 
 -- Creating DocsHaveSchedules Table
 CREATE TABLE DocsHaveSchedules(
-    sched INT NOT NULL,                                -- Schedule ID
+    sched INT NOT NULL,                               -- Schedule ID
     doctor VARCHAR(50) NOT NULL,                      -- Email of the doctor
     FOREIGN KEY (sched) REFERENCES Schedule (id) ON DELETE CASCADE,
     FOREIGN KEY (doctor) REFERENCES Doctor (email) ON DELETE CASCADE,
@@ -90,7 +91,7 @@ CREATE TABLE DocsHaveSchedules(
 
 -- Creating DoctorViewsHistory Table
 CREATE TABLE DoctorViewsHistory(
-    history INT NOT NULL,                              -- Medical History ID
+    history INT NOT NULL,                             -- Medical History ID
     doctor VARCHAR(50) NOT NULL,                      -- Email of the doctor viewing the history
     FOREIGN KEY (doctor) REFERENCES Doctor (email) ON DELETE CASCADE,
     FOREIGN KEY (history) REFERENCES MedicalHistory (id) ON DELETE CASCADE,
@@ -118,12 +119,12 @@ CREATE TABLE SupportStaff (
 -- Creating BillingAndPayments Table
 CREATE TABLE BillingAndPayments (
     billing_id INT PRIMARY KEY AUTO_INCREMENT,      									-- Unique identifier for each bill
-    patient_id VARCHAR(50),                                 									-- Links to the Patients table
+    patient_id VARCHAR(50),                                 							-- Links to the Patients table
     appointment_id INT,                             									-- Links to the Appointments table
     total_amount DECIMAL(10,2),                     									-- The total bill amount
     paid_amount DECIMAL(10,2),                      									-- The amount already paid
-    payment_method ENUM('Cash', 'Card', 'Insurance', 'Online'),  			 -- Payment mode
-    payment_status ENUM('Paid', 'Pending', 'Partially Paid'),     		-- Payment status
+    payment_method ENUM('Cash', 'Card', 'Insurance', 'Online'),  			            -- Payment mode
+    payment_status ENUM('Paid', 'Pending', 'Partially Paid'),     		                -- Payment status
     payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  									
     FOREIGN KEY (patient_id) REFERENCES Patient(email),
     FOREIGN KEY (appointment_id) REFERENCES Appointment(id)
@@ -136,17 +137,17 @@ CREATE TABLE MedicineInventory (
     batch_number VARCHAR(50) NOT NULL,                 -- Unique batch number for tracking
     manufacturer VARCHAR(100),                         -- Manufacturer of the medicine
     category ENUM('Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment'), -- Type of medicine
-    quantity INT NOT NULL DEFAULT 0,                    -- Current stock level
-    unit_price DECIMAL(10,2) NOT NULL,                  -- Price per unit
+    quantity INT NOT NULL DEFAULT 0,                   -- Current stock level
+    unit_price DECIMAL(10,2) NOT NULL,                 -- Price per unit
     expiry_date DATE                                   -- Expiration date
 );
 
 -- Creating Emergency Table
 CREATE TABLE Emergency (
     EmergencyID INT PRIMARY KEY AUTO_INCREMENT,        -- Unique identifier for each emergency case
-    PatientID VARCHAR(50) NOT NULL,                            -- Patient ID linked to the emergency
+    PatientID VARCHAR(50) NOT NULL,                    -- Patient ID linked to the emergency
     PatientCondition TEXT NOT NULL,                    -- Description of the patient’s condition
-    DoctorID VARCHAR(50) NOT NULL,                             -- Assigned Doctor ID
+    DoctorID VARCHAR(50) NOT NULL,                     -- Assigned Doctor ID
     ArrivalTime DATETIME NOT NULL,                     -- Time of patient arrival
     FOREIGN KEY (PatientID) REFERENCES Patient(email) ON DELETE CASCADE,
     FOREIGN KEY (DoctorID) REFERENCES Doctor(email) ON DELETE CASCADE
@@ -155,11 +156,8 @@ CREATE TABLE Emergency (
 -- Creating Insurance Table
 CREATE TABLE Insurance (
     InsuranceID INT PRIMARY KEY AUTO_INCREMENT,        -- Unique identifier for each insurance record
-    PatientID VARCHAR(50) NOT NULL,                            -- Patient ID linked to the insurance
+    PatientID VARCHAR(50) NOT NULL,                    -- Patient ID linked to the insurance
     ProviderName VARCHAR(255) NOT NULL,                -- Insurance provider name
     PolicyNumber VARCHAR(50) UNIQUE NOT NULL,          -- Unique policy number
     FOREIGN KEY (PatientID) REFERENCES Patient(email)
 );
-
-
-
