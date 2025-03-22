@@ -1,49 +1,49 @@
+-- Drop and create the database
 DROP DATABASE IF EXISTS HMS;
-
 CREATE DATABASE IF NOT EXISTS HMS;
 USE HMS;
 
 -- Creating Patient Table
 CREATE TABLE Patient(
-    email VARCHAR(50) PRIMARY KEY,                     -- Unique identifier for each patient (email-based)
-    password VARCHAR(30) NOT NULL,                     -- Password for patient login
+    email VARCHAR(50) PRIMARY KEY,                     -- Unique identifier for each patient
+    password VARCHAR(30) NOT NULL,                     -- Encrypted password for authentication
     name VARCHAR(50) NOT NULL,                         -- Patient's full name
-    address VARCHAR(60) NOT NULL,                      -- Patient's residential address
-    gender VARCHAR(20) NOT NULL                        -- Patient's gender
+    address VARCHAR(60) NOT NULL,                      -- Residential address
+    gender ENUM('Male', 'Female', 'Other') NOT NULL    -- Gender selection
 );
 
 -- Creating MedicalHistory Table
 CREATE TABLE MedicalHistory(
-    id INT PRIMARY KEY,                               -- Unique identifier for medical history
-    date DATE NOT NULL,                               -- Date of record entry
-    conditions VARCHAR(100) NOT NULL,                 -- List of medical conditions
-    surgeries VARCHAR(100) NOT NULL,                  -- List of previous surgeries
-    medication VARCHAR(100) NOT NULL                  -- List of prescribed medications
+    id INT PRIMARY KEY AUTO_INCREMENT,                 -- Unique auto-incremented medical history ID
+    date DATE NOT NULL,                                -- Date of medical history record
+    conditions VARCHAR(255) NOT NULL,                  -- Patient's existing conditions
+    surgeries VARCHAR(255) NOT NULL,                   -- Past surgeries
+    medication VARCHAR(255) NOT NULL                   -- Ongoing medications
 );
 
 -- Creating Doctor Table
 CREATE TABLE Doctor(
-    email VARCHAR(50) PRIMARY KEY,                    -- Unique identifier for each doctor (email-based)
-    gender VARCHAR(20) NOT NULL,                      -- Doctor's gender
-    password VARCHAR(30) NOT NULL,                    -- Password for doctor login
-    name VARCHAR(50) NOT NULL                         -- Doctor's full name
+    email VARCHAR(50) PRIMARY KEY,                     -- Unique identifier for each doctor
+    password VARCHAR(30) NOT NULL,                     -- Encrypted password for authentication
+    name VARCHAR(50) NOT NULL,                         -- Doctor's full name
+    gender ENUM('Male', 'Female', 'Other') NOT NULL    -- Gender selection
 );
 
 -- Creating Appointment Table
 CREATE TABLE Appointment(
-    id INT PRIMARY KEY,                                -- Unique identifier for each appointment
+    id INT PRIMARY KEY AUTO_INCREMENT,                 -- Unique auto-incremented appointment ID
     date DATE NOT NULL,                                -- Date of appointment
-    starttime TIME NOT NULL,                           -- Start time of the appointment
-    endtime TIME NOT NULL,                             -- End time of the appointment
-    status VARCHAR(15) NOT NULL                        -- Appointment status (e.g., Scheduled, Completed, Cancelled)
+    starttime TIME NOT NULL,                           -- Start time of appointment
+    endtime TIME NOT NULL,                             -- End time of appointment
+    status ENUM('Scheduled', 'Completed', 'Cancelled') DEFAULT 'Scheduled' -- Appointment status
 );
 
--- Creating PatientsAttendAppointments Table
+-- Creating PatientsAttendAppointments Table (Junction Table)
 CREATE TABLE PatientsAttendAppointments(
-    patient VARCHAR(50) NOT NULL,                     -- Email of the patient attending the appointment
-    appt INT NOT NULL,                                -- Appointment ID
-    concerns VARCHAR(40) NOT NULL,                    -- Patient's concerns for the appointment
-    symptoms VARCHAR(40) NOT NULL,                    -- Symptoms reported by the patient
+    patient VARCHAR(50) NOT NULL,                      -- Patient's email (foreign key)
+    appt INT NOT NULL,                                 -- Appointment ID (foreign key)
+    concerns VARCHAR(255) NOT NULL,                    -- Patient concerns
+    symptoms VARCHAR(255) NOT NULL,                    -- Symptoms reported by patient
     FOREIGN KEY (patient) REFERENCES Patient (email) ON DELETE CASCADE,
     FOREIGN KEY (appt) REFERENCES Appointment (id) ON DELETE CASCADE,
     PRIMARY KEY (patient, appt)
@@ -51,48 +51,46 @@ CREATE TABLE PatientsAttendAppointments(
 
 -- Creating Schedule Table
 CREATE TABLE Schedule(
-    id INT NOT NULL,                                   -- Unique identifier for the schedule
-    starttime TIME NOT NULL,                           -- Start time of the doctor's shift
-    endtime TIME NOT NULL,                             -- End time of the doctor's shift
-    breaktime TIME NOT NULL,                           -- Break time during the shift
-    day VARCHAR(20) NOT NULL,                          -- Day of the week
-    PRIMARY KEY (id, starttime, endtime, breaktime, day),
-    UNIQUE (id)                                        -- Ensuring id is unique
+    id INT PRIMARY KEY AUTO_INCREMENT,                 -- Unique schedule ID
+    starttime TIME NOT NULL,                           -- Shift start time
+    endtime TIME NOT NULL,                             -- Shift end time
+    breaktime TIME NOT NULL,                           -- Break period
+    day ENUM('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday') NOT NULL -- Workday
 );
 
--- Creating PatientsFillHistory Table
+-- Creating PatientsFillHistory Table (Junction Table)
 CREATE TABLE PatientsFillHistory(
-    patient VARCHAR(50) NOT NULL,                     -- Email of the patient filling the history
-    history INT NOT NULL,                             -- Medical History ID
+    patient VARCHAR(50) NOT NULL,                      -- Patient's email (foreign key)
+    history INT NOT NULL,                              -- Medical history ID (foreign key)
     FOREIGN KEY (patient) REFERENCES Patient (email) ON DELETE CASCADE,
     FOREIGN KEY (history) REFERENCES MedicalHistory (id) ON DELETE CASCADE,
-    PRIMARY KEY (patient, history)                    -- Updated to composite primary key
+    PRIMARY KEY (patient, history)                     -- Composite primary key
 );
 
 -- Creating Diagnose Table
 CREATE TABLE Diagnose(
-    appt INT NOT NULL,                                -- Appointment ID
-    doctor VARCHAR(50) NOT NULL,                      -- Email of the diagnosing doctor
-    diagnosis VARCHAR(40) NOT NULL,                   -- Diagnosis details
-    prescription VARCHAR(50) NOT NULL,                -- Prescription details
+    appt INT NOT NULL,                                 -- Appointment ID (foreign key)
+    doctor VARCHAR(50) NOT NULL,                       -- Doctor's email (foreign key)
+    diagnosis VARCHAR(255) NOT NULL,                   -- Diagnosis description
+    prescription VARCHAR(255) NOT NULL,                -- Prescribed medication or treatment
     FOREIGN KEY (appt) REFERENCES Appointment (id) ON DELETE CASCADE,
     FOREIGN KEY (doctor) REFERENCES Doctor (email) ON DELETE CASCADE,
     PRIMARY KEY (appt, doctor)
 );
 
--- Creating DocsHaveSchedules Table
+-- Creating DocsHaveSchedules Table (Junction Table)
 CREATE TABLE DocsHaveSchedules(
-    sched INT NOT NULL,                               -- Schedule ID
-    doctor VARCHAR(50) NOT NULL,                      -- Email of the doctor
+    sched INT NOT NULL,                                -- Schedule ID (foreign key)
+    doctor VARCHAR(50) NOT NULL,                       -- Doctor's email (foreign key)
     FOREIGN KEY (sched) REFERENCES Schedule (id) ON DELETE CASCADE,
     FOREIGN KEY (doctor) REFERENCES Doctor (email) ON DELETE CASCADE,
     PRIMARY KEY (sched, doctor)
 );
 
--- Creating DoctorViewsHistory Table
+-- Creating DoctorViewsHistory Table (Junction Table)
 CREATE TABLE DoctorViewsHistory(
-    history INT NOT NULL,                             -- Medical History ID
-    doctor VARCHAR(50) NOT NULL,                      -- Email of the doctor viewing the history
+    history INT NOT NULL,                              -- Medical history ID (foreign key)
+    doctor VARCHAR(50) NOT NULL,                       -- Doctor's email (foreign key)
     FOREIGN KEY (doctor) REFERENCES Doctor (email) ON DELETE CASCADE,
     FOREIGN KEY (history) REFERENCES MedicalHistory (id) ON DELETE CASCADE,
     PRIMARY KEY (history, doctor)
@@ -100,55 +98,55 @@ CREATE TABLE DoctorViewsHistory(
 
 -- Creating RoomsAndWards Table
 CREATE TABLE RoomsAndWards (
-    RoomID INT PRIMARY KEY,                            -- Unique room identifier
-    RoomType VARCHAR(50),                              -- Type of room (e.g., General, ICU, Private)
-    AvailabilityStatus VARCHAR(50),                    -- Availability status (e.g., Available, Occupied)
-    AssignedPatientID VARCHAR(255),                    -- Email of the assigned patient (if any)
-    FOREIGN KEY (AssignedPatientID) REFERENCES Patient(email)
+    RoomID INT PRIMARY KEY AUTO_INCREMENT,            -- Unique room ID
+    RoomType ENUM('General', 'ICU', 'Private') NOT NULL,  -- Room classification
+    AvailabilityStatus ENUM('Available', 'Occupied') DEFAULT 'Available',  -- Availability status
+    AssignedPatientID VARCHAR(50),                    -- Assigned patient (foreign key)
+    FOREIGN KEY (AssignedPatientID) REFERENCES Patient(email) ON DELETE SET NULL
 );
 
 -- Creating SupportStaff Table
 CREATE TABLE SupportStaff (
-    StaffID INT PRIMARY KEY,                           -- Unique identifier for support staff
-    Name VARCHAR(255),                                 -- Support staff's full name
-    Role VARCHAR(100),                                 -- Staff role (e.g., Nurse, Technician, Admin)
-    Department VARCHAR(100),                           -- Department where the staff works
-    Shift VARCHAR(50)                                  -- Staff shift details (e.g., Morning, Evening, Night)
+    StaffID INT PRIMARY KEY AUTO_INCREMENT,          -- Unique staff ID
+    Name VARCHAR(255) NOT NULL,                       -- Staff name
+    Role ENUM('Nurse', 'Technician', 'Admin', 'Janitor') NOT NULL,   -- Staff role
+    Department VARCHAR(100),                          -- Department assigned
+    Shift ENUM('Morning', 'Evening', 'Night')        -- Work shift
 );
 
 -- Creating BillingAndPayments Table
 CREATE TABLE BillingAndPayments (
-    billing_id INT PRIMARY KEY AUTO_INCREMENT,      									-- Unique identifier for each bill
-    patient_id VARCHAR(50),                                 							-- Links to the Patients table
-    appointment_id INT,                             									-- Links to the Appointments table
-    total_amount DECIMAL(10,2),                     									-- The total bill amount
-    paid_amount DECIMAL(10,2),                      									-- The amount already paid
-    payment_method ENUM('Cash', 'Card', 'Insurance', 'Online'),  			            -- Payment mode
-    payment_status ENUM('Paid', 'Pending', 'Partially Paid'),     		                -- Payment status
-    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  									
-    FOREIGN KEY (patient_id) REFERENCES Patient(email),
-    FOREIGN KEY (appointment_id) REFERENCES Appointment(id)
+    billing_id INT PRIMARY KEY AUTO_INCREMENT,      -- Unique billing ID
+    patient_id VARCHAR(50) NOT NULL,                -- Patient ID (foreign key)
+    appointment_id INT NOT NULL,                    -- Appointment ID (foreign key)
+    total_amount DECIMAL(10,2) NOT NULL,            -- Total bill amount
+    paid_amount DECIMAL(10,2) DEFAULT 0.00,         -- Amount paid
+    payment_method ENUM('Cash', 'Card', 'Insurance', 'Online') NOT NULL,  -- Payment method
+    payment_status ENUM('Paid', 'Pending', 'Partially Paid') DEFAULT 'Pending',  -- Payment status
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,   -- Payment date and time
+    FOREIGN KEY (patient_id) REFERENCES Patient(email) ON DELETE CASCADE,
+    FOREIGN KEY (appointment_id) REFERENCES Appointment(id) ON DELETE CASCADE
 );
 
 -- Creating MedicineInventory Table
 CREATE TABLE MedicineInventory (
-    medicine_id INT PRIMARY KEY AUTO_INCREMENT,        -- Unique ID for each medicine
-    medicine_name VARCHAR(100) NOT NULL,               -- Name of the medicine
-    batch_number VARCHAR(50) NOT NULL,                 -- Unique batch number for tracking
-    manufacturer VARCHAR(100),                         -- Manufacturer of the medicine
-    category ENUM('Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment'), -- Type of medicine
-    quantity INT NOT NULL DEFAULT 0,                   -- Current stock level
+    medicine_id INT PRIMARY KEY AUTO_INCREMENT,        -- Unique medicine ID
+    medicine_name VARCHAR(100) NOT NULL,               -- Medicine name
+    batch_number VARCHAR(50) UNIQUE NOT NULL,          -- Unique batch number
+    manufacturer VARCHAR(100),                         -- Manufacturer name
+    category ENUM('Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment') NOT NULL,  -- Medicine type
+    quantity INT NOT NULL DEFAULT 0,                   -- Available quantity
     unit_price DECIMAL(10,2) NOT NULL,                 -- Price per unit
-    expiry_date DATE                                   -- Expiration date
+    expiry_date DATE                                   -- Expiry date
 );
 
 -- Creating Emergency Table
 CREATE TABLE Emergency (
-    EmergencyID INT PRIMARY KEY AUTO_INCREMENT,        -- Unique identifier for each emergency case
-    PatientID VARCHAR(50) NOT NULL,                    -- Patient ID linked to the emergency
-    PatientCondition TEXT NOT NULL,                    -- Description of the patient’s condition
-    DoctorID VARCHAR(50) NOT NULL,                     -- Assigned Doctor ID
-    ArrivalTime DATETIME NOT NULL,                     -- Time of patient arrival
+    EmergencyID INT PRIMARY KEY AUTO_INCREMENT,        -- Unique emergency case ID
+    PatientID VARCHAR(50) NOT NULL,                    -- Patient ID (foreign key)
+    PatientCondition TEXT NOT NULL,                    -- Emergency condition details
+    DoctorID VARCHAR(50) NOT NULL,                     -- Attending doctor ID (foreign key)
+    ArrivalTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- Arrival timestamp
     FOREIGN KEY (PatientID) REFERENCES Patient(email) ON DELETE CASCADE,
     FOREIGN KEY (DoctorID) REFERENCES Doctor(email) ON DELETE CASCADE
 );
@@ -680,40 +678,40 @@ VALUES
 -- Inserting Data into SupportStaff Table
 INSERT INTO SupportStaff (StaffID, Name, Role, Department, Shift)
 VALUES
-(1, 'Emily Johnson', 'Nurse', 'Emergency', 'Day'),
+(1, 'Emily Johnson', 'Nurse', 'Emergency', 'Evening'),
 (2, 'Mark Lee', 'Technician', 'Radiology', 'Night'),
 (3, 'Rachel Green', 'Admin', 'Reception', 'Morning'),
 (4, 'John Smith', 'Nurse', 'ICU', 'Night'),
-(5, 'Linda Brown', 'Technician', 'Laboratory', 'Day'),
+(5, 'Linda Brown', 'Technician', 'Laboratory', 'Evening'),
 (6, 'Michael Davis', 'Admin', 'Billing', 'Morning'),
-(7, 'Sarah Wilson', 'Nurse', 'General Ward', 'Day'),
+(7, 'Sarah Wilson', 'Nurse', 'General Ward', 'Evening'),
 (8, 'David Miller', 'Technician', 'Pharmacy', 'Night'),
 (9, 'Laura Moore', 'Admin', 'Records', 'Morning'),
-(10, 'James Taylor', 'Nurse', 'Surgery', 'Day'),
+(10, 'James Taylor', 'Nurse', 'Surgery', 'Evening'),
 (11, 'Barbara Anderson', 'Technician', 'Radiology', 'Night'),
 (12, 'Robert Thomas', 'Admin', 'Reception', 'Morning'),
-(13, 'Patricia Jackson', 'Nurse', 'Emergency', 'Day'),
+(13, 'Patricia Jackson', 'Nurse', 'Emergency', 'Evening'),
 (14, 'Charles Harris', 'Technician', 'Laboratory', 'Night'),
 (15, 'Jennifer Martin', 'Admin', 'Billing', 'Morning'),
-(16, 'Daniel Thompson', 'Nurse', 'ICU', 'Day'),
+(16, 'Daniel Thompson', 'Nurse', 'ICU', 'Evening'),
 (17, 'Matthew Garcia', 'Technician', 'Pharmacy', 'Night'),
 (18, 'Elizabeth Martinez', 'Admin', 'Records', 'Morning'),
-(19, 'Anthony Robinson', 'Nurse', 'General Ward', 'Day'),
+(19, 'Anthony Robinson', 'Nurse', 'General Ward', 'Evening'),
 (20, 'Susan Clark', 'Technician', 'Radiology', 'Night'),
 (21, 'Mark Lewis', 'Admin', 'Reception', 'Morning'),
-(22, 'Mary Walker', 'Nurse', 'Surgery', 'Day'),
+(22, 'Mary Walker', 'Nurse', 'Surgery', 'Evening'),
 (23, 'Paul Hall', 'Technician', 'Laboratory', 'Night'),
 (24, 'Nancy Allen', 'Admin', 'Billing', 'Morning'),
-(25, 'Steven Young', 'Nurse', 'Emergency', 'Day'),
+(25, 'Steven Young', 'Nurse', 'Emergency', 'Evening'),
 (26, 'Karen King', 'Technician', 'Pharmacy', 'Night'),
 (27, 'Joshua Wright', 'Admin', 'Records', 'Morning'),
-(28, 'Betty Lopez', 'Nurse', 'ICU', 'Day'),
+(28, 'Betty Lopez', 'Nurse', 'ICU', 'Evening'),
 (29, 'Kevin Hill', 'Technician', 'Radiology', 'Night'),
 (30, 'Helen Scott', 'Admin', 'Reception', 'Morning'),
-(31, 'Brian Green', 'Nurse', 'General Ward', 'Day'),
+(31, 'Brian Green', 'Nurse', 'General Ward', 'Evening'),
 (32, 'Sandra Adams', 'Technician', 'Laboratory', 'Night'),
 (33, 'Edward Baker', 'Admin', 'Billing', 'Morning'),
-(34, 'Donna Nelson', 'Nurse', 'Surgery', 'Day'),
+(34, 'Donna Nelson', 'Nurse', 'Surgery', 'Evening'),
 (35, 'Ronald Carter', 'Technician', 'Pharmacy', 'Night');
 
 -- Inserting Data into BillingAndPayments Table
