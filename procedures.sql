@@ -1,19 +1,19 @@
 -- PROCEDURE: Register a New Patient
 -- USE CASE: Add a new patient to the system.
 -- Example: CALL RegisterPatient('john.doe@example.com', 'securepass', 'John Doe', '123 Elm St', 'Male');
-DELIMITER //
-CREATE PROCEDURE RegisterPatient(
-    IN p_email VARCHAR(50),
-    IN p_password VARCHAR(30),
-    IN p_name VARCHAR(50),
-    IN p_address VARCHAR(60),
-    IN p_gender ENUM('Male', 'Female', 'Other')
-)
-BEGIN
-    INSERT INTO Patient (email, password, name, address, gender)
-    VALUES (p_email, p_password, p_name, p_address, p_gender);
-END //
-DELIMITER ;
+-- DELIMITER //
+-- CREATE PROCEDURE RegisterPatient(
+--     IN p_email VARCHAR(50),
+--     IN p_password VARCHAR(30),
+--     IN p_name VARCHAR(50),
+--     IN p_address VARCHAR(60),
+--     IN p_gender ENUM('Male', 'Female', 'Other')
+-- )
+-- BEGIN
+--     INSERT INTO Patient (email, password, name, address, gender)
+--     VALUES (p_email, p_password, p_name, p_address, p_gender);
+-- END //
+-- DELIMITER ;
 
 
 -- PROCEDURE: Schedule an Appointment
