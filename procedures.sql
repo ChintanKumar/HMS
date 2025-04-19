@@ -64,3 +64,13 @@ BEGIN
     WHERE patient_id = p_patient_id AND appointment_id = p_appointment_id;
 END //
 DELIMITER ;
+
+
+-- PROCEDURE Calls
+
+-- Scheduling an appointment
+CALL ScheduleAppointment('john.doe@example.com', 'dr.jane@example.com', '2025-04-25', '10:00:00', '10:30:00', 'Scheduled');
+
+
+-- Processing Payment
+CALL ProcessPayment('john.doe@example.com', 101, 50.00, 'Card');

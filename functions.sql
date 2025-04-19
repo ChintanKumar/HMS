@@ -16,3 +16,11 @@ BEGIN
     RETURN IFNULL(schedule_info, 'No schedule available');
 END //
 DELIMITER ;
+
+
+
+
+
+
+-- Function Call
+SELECT GetDoctorAvailability('dr.jane@example.com', 'Monday');
