@@ -57,6 +57,9 @@ BEGIN
     WHERE AssignedPatientID = patient_email;
 END;
 
+
+-- Example: Discharge the patient with email 'mike.patient@hospital.com'
+CALL DischargePatient('mike.patient@hospital.com');
 ----------------------------------------------------------------------------------------------------------------------------------------------
 -- 3) HandleEmergencyAdmission
 -- Purpose: Handles an emergency admission by creating an emergency record, assigning a doctor and room if available.
@@ -93,6 +96,9 @@ BEGIN
     WHERE RoomID = room_id;
 END;
 
+
+-- Example: Admit patient 'emily.smith@hospital.com' for an emergency condition
+CALL HandleEmergencyAdmission('emily.smith@hospital.com', 'Severe abdominal pain and shortness of breath');
 ----------------------------------------------------------------------------------------------------------------------------------------------
 -- PREVIOUSLY ADDED STORED PROCEDURES
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
