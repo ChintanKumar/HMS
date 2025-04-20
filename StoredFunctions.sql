@@ -30,6 +30,9 @@ BEGIN
     RETURN IFNULL((total_appointment_minutes / total_schedule_minutes) * 100, 0);
 END;
 
+
+-- Example: Check utilization for Doctor ID 102
+SELECT GetDoctorUtilization(102) AS utilization_percentage;
 ------------------------------------------------------------------------------------------------------------------------------------------------
 -- 2) Calculate the total billing amount for a specific patient.
 -- Input: patient_email (the patient’s unique email ID).
@@ -72,6 +75,9 @@ BEGIN
     RETURN IFNULL(total_unpaid, 0);
 END;
 
+
+-- Example: Get outstanding balance for Patient ID 205
+SELECT CalculateOutstandingBalance(205) AS pending_dues;
 ------------------------------------------------------------------------------------------------------------------------------------------------
 -- 4) Count number of appointments paid through insurance.
 -- Input: patient_email (VARCHAR)
