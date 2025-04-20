@@ -31,8 +31,8 @@ BEGIN
 END;
 
 
--- Example: Check utilization for Doctor ID 102
-SELECT GetDoctorUtilization(102) AS utilization_percentage;
+-- Example: Get utilization for doctor with email 'dr.jane@hospital.com'
+SELECT GetDoctorUtilization('dr.jane@hospital.com') AS utilization_percentage;
 ------------------------------------------------------------------------------------------------------------------------------------------------
 -- 2) Calculate the total billing amount for a specific patient.
 -- Input: patient_email (the patient’s unique email ID).
@@ -76,8 +76,8 @@ BEGIN
 END;
 
 
--- Example: Get outstanding balance for Patient ID 205
-SELECT CalculateOutstandingBalance(205) AS pending_dues;
+-- Example: Get outstanding balance for patient with email 'patient.mike@hospital.com'
+SELECT CalculateOutstandingBalance('patient.mike@hospital.com') AS pending_dues;
 ------------------------------------------------------------------------------------------------------------------------------------------------
 -- 4) Count number of appointments paid through insurance.
 -- Input: patient_email (VARCHAR)
