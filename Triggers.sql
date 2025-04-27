@@ -19,6 +19,12 @@ END$$
 
 DELIMITER ;
 
+-- This should FAIL because paid_amount > total_amount
+INSERT INTO BillingAndPayments (billing_id, paid_amount, total_amount, payment_status)
+VALUES (1, 120, 100, 'Pending');
+-- This should SUCCEED
+INSERT INTO BillingAndPayments (billing_id, paid_amount, total_amount, payment_status)
+VALUES (2, 80, 100, 'Pending');
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- 2) AfterUpdate_PaymentCompletedLog
 -- Purpose: Log when a payment status changes to 'Paid'.
@@ -41,6 +47,16 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+-- Insert initial billing record
+INSERT INTO BillingAndPayments (billing_id, paid_amount, total_amount, payment_status)
+VALUES (3, 50, 100, 'Pending');
+-- Update to trigger the AFTER UPDATE trigger
+UPDATE BillingAndPayments
+SET payment_status = 'Paid'
+WHERE billing_id = 3;
+-- should show a log entry is created
+SELECT * FROM PaymentLogs;
 
 ------------------------------------------------------------------------------------------------------------------------------------------------
 -- 3) BeforeInsert_DoctorScheduleConflict
@@ -73,5 +89,12 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+-- Insert doctor-schedule mapping
+INSERT INTO DocsHaveSchedules (doctor, sched)
+VALUES (1, 1); -- Suppose Schedule ID 1 is Mon 9AM-12PM
+-- Try to assign overlapping schedule
+INSERT INTO DocsHaveSchedules (doctor, sched)
+VALUES (1, 2); -- Suppose Schedule ID 2 is Mon 11AM-2PM → Overlaps 9AM-12PM
 ------------------------------------------------------------------------------------------------------------------------------------------------
 
