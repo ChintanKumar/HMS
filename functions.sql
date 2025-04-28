@@ -17,10 +17,29 @@ BEGIN
 END //
 DELIMITER ;
 
-
-
-
-
-
 -- Function Call
 SELECT GetDoctorAvailability('dr.jane@example.com', 'Monday');
+
+-- FUNCTION: Get Medicine Stock Level
+-- USE CASE: Fetch the current available quantity of a specific medicine from the inventory.
+-- Example: SELECT GetMedicineStockLevel('Paracetamol');
+DELIMITER //
+
+CREATE FUNCTION GetMedicineStockLevel(p_medicine_name VARCHAR(100))
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE stock_level INT;
+    
+    SELECT quantity INTO stock_level
+    FROM MedicineInventory
+    WHERE medicine_name = p_medicine_name
+    LIMIT 1; -- Ensures only one record is fetched
+    
+    RETURN IFNULL(stock_level, 0); -- If not found, return 0
+END //
+
+DELIMITER ;
+
+-- Function Call
+SELECT GetMedicineStockLevel('Paracetamol') AS AvailableStock;
