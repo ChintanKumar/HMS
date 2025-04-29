@@ -33,11 +33,12 @@ CALL ScheduleAppointment('john.doe@example.com', 'dr.jane@example.com', '2025-04
 -- USE CASE: Update a patient's billing record after a payment.
 -- Example: CALL ProcessPayment('john.doe@example.com', 101, 50.00, 'Card');
 DELIMITER //
+
 CREATE PROCEDURE ProcessPayment(
     IN p_patient_id VARCHAR(50),
     IN p_appointment_id INT,
     IN p_paid_amount DECIMAL(10,2),
-    IN p_payment_method ENUM('Cash', 'Card', 'Insurance', 'Online')
+    IN p_payment_method VARCHAR(20)  -- <<< Fixed: VARCHAR instead of ENUM
 )
 BEGIN
     UPDATE BillingAndPayments
@@ -50,6 +51,7 @@ BEGIN
         payment_date = NOW()
     WHERE patient_id = p_patient_id AND appointment_id = p_appointment_id;
 END //
+
 DELIMITER ;
 
 -- Processing Payment
