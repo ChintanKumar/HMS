@@ -101,13 +101,13 @@ CREATE TABLE Insurance (
     FOREIGN KEY (PatientID) REFERENCES Patient(email)
 );
 
--- Creating DocsHaveSchedules Table (Junction Table)
-CREATE TABLE DocsHaveSchedules(
-    sched INT NOT NULL,                                -- Schedule ID (foreign key)
-    doctor VARCHAR(50) NOT NULL,                       -- Doctor's email (foreign key)
-    FOREIGN KEY (sched) REFERENCES Schedule (id) ON DELETE CASCADE,
-    FOREIGN KEY (doctor) REFERENCES Doctor (email) ON DELETE CASCADE,
-    PRIMARY KEY (sched, doctor)
+-- Creating Schedule Table
+CREATE TABLE Schedule(
+    id INT PRIMARY KEY AUTO_INCREMENT,                 -- Unique schedule ID
+    starttime TIME NOT NULL,                           -- Shift start time
+    endtime TIME NOT NULL,                             -- Shift end time
+    breaktime TIME NOT NULL,                           -- Break period
+    day ENUM('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday') NOT NULL -- Workday
 );
 
 -- Creating DoctorViewsHistory Table (Junction Table)
@@ -134,13 +134,13 @@ CREATE TABLE BillingAndPayments (
     FOREIGN KEY (appointment_id) REFERENCES Appointment(id) ON DELETE CASCADE
 );
 
--- Creating Schedule Table
-CREATE TABLE Schedule(
-    id INT PRIMARY KEY AUTO_INCREMENT,                 -- Unique schedule ID
-    starttime TIME NOT NULL,                           -- Shift start time
-    endtime TIME NOT NULL,                             -- Shift end time
-    breaktime TIME NOT NULL,                           -- Break period
-    day ENUM('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday') NOT NULL -- Workday
+-- Creating DocsHaveSchedules Table (Junction Table)
+CREATE TABLE DocsHaveSchedules(
+    sched INT NOT NULL,                                -- Schedule ID (foreign key)
+    doctor VARCHAR(50) NOT NULL,                       -- Doctor's email (foreign key)
+    FOREIGN KEY (sched) REFERENCES Schedule (id) ON DELETE CASCADE,
+    FOREIGN KEY (doctor) REFERENCES Doctor (email) ON DELETE CASCADE,
+    PRIMARY KEY (sched, doctor)
 );
 
 -- Creating MedicineInventory Table
