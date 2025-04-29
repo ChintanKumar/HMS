@@ -1536,6 +1536,16 @@ FROM MedicineInventory m
 WHERE m.quantity < 20
 ORDER BY m.expiry_date ASC;
 
+-- SIMPLE QUERY 5.1: GET MEDICINE STOCK DETAILS WITH LOW INVENTORY / (Inventory Management)
+SELECT 
+    m.medicine_id,
+    m.medicine_name,
+    GetMedicineStockLevel(m.medicine_name) AS StockLevel,
+    m.expiry_date
+FROM MedicineInventory m
+WHERE GetMedicineStockLevel(m.medicine_name) < 20
+ORDER BY m.expiry_date ASC;
+
 -- SIMPLE QUERY 6: GET TOTAL OUTSTANDING DUES / (Finance and Billing)
 SELECT SUM(total_amount - paid_amount) AS total_due FROM BillingAndPayments WHERE payment_status != 'Paid';
 
@@ -1713,6 +1723,14 @@ SELECT p.email AS PatientEmail,
 FROM Patient p
 JOIN BillingAndPayments b ON p.email = b.patient_id
 WHERE b.payment_status = 'Pending';
+
+-- Complex Query 10.1: LIST PATIENTS WITH PENDING PAYMENTS AND OUTSTANDING DUES / (Finance and Billing)
+SELECT 
+    p.email AS PatientEmail,
+    p.name AS PatientName,
+    CalculateBalance(p.email) AS OutstandingAmount
+FROM Patient p
+WHERE CalculateBalance(p.email) > 0;
 
 -- Complex Query 11: RETRIEVE BOTH OCCUPIED AND UNOCCUPIED ROOMS WITH ASSIGNED PATIENTS / (Hospital Admin/Patient Management)
 SELECT r.RoomID, 
