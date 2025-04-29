@@ -59,42 +59,65 @@ CALL ProcessPayment('john.doe@example.com', 101, 50.00, 'Card');
 
 -- KHUSHI'S WORK
 -- PROCEDURE 3: Generate a billing statement for a given appointment, including patient details, appointment information, diagnosis, prescription, and a placeholder for billing details.
+
 DELIMITER //
-CREATE PROCEDURE GenerateBillingStatement(
-    IN p_appointment_id INT
-)
+
+CREATE PROCEDURE GenerateBillingStatements(IN p_appointment_id INT)
 BEGIN
-    -- Check if the appointment exists
+    -- Validate appointment existence
     IF NOT EXISTS (SELECT 1 FROM Appointment WHERE id = p_appointment_id) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Appointment not found.';
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Appointment not found.';
     END IF;
 
-    -- Retrieve patient information, appointment details, diagnosis, and prescribed medicines
-    SELECT
+    -- Display patient and appointment info
+    SELECT 
         p.name AS PatientName,
         p.email AS PatientEmail,
         a.date AS AppointmentDate,
-        a.starttime AS AppointmentStartTime,
+        a.starttime AS AppointmentTime,
         d.diagnosis AS Diagnosis,
         d.prescription AS Prescription
-    FROM Patient p
-    JOIN PatientsAttendAppointments paa ON p.email = paa.patient
-    JOIN Appointment a ON paa.appt = p_appointment_id
-    LEFT JOIN Diagnose d ON a.id = d.appt
+    FROM Appointment a
+    JOIN PatientsAttendAppointments paa ON paa.appt = a.id
+    JOIN Patient p ON p.email = paa.patient
+    LEFT JOIN Diagnose d ON d.appt = a.id
     WHERE a.id = p_appointment_id;
 
-    -- You would typically add logic here to calculate charges based on services, medicines, etc.
-    -- For simplicity, we'll just display a placeholder for now.
-    SELECT '--- BILLING DETAILS ---' AS BillingHeader;
-    SELECT 'Consultation Fee' AS Item, 50.00 AS Amount; -- Example charge
-    SELECT 'Medication Cost (if applicable)' AS Item, 0.00 AS Amount; -- Placeholder
-    SELECT '--- END OF STATEMENT ---' AS BillingFooter;
-
+    -- Billing breakdown
+    SELECT 
+        'Consultation Fee' AS Item, 50.00 AS Amount
+    UNION ALL
+    SELECT 
+        'Medication Cost', 
+        IFNULL((
+            SELECT SUM(price)
+            FROM MedicationCost
+            WHERE FIND_IN_SET(medicine_name, (
+                SELECT d.prescription
+                FROM Diagnose d
+                WHERE d.appt = p_appointment_id
+                LIMIT 1
+            ))
+        ), 0.00)
+    UNION ALL
+    SELECT 
+        'TOTAL',
+        50.00 + IFNULL((
+            SELECT SUM(price)
+            FROM MedicationCost
+            WHERE FIND_IN_SET(medicine_name, (
+                SELECT d.prescription
+                FROM Diagnose d
+                WHERE d.appt = p_appointment_id
+                LIMIT 1
+            ))
+        ), 0.00);
 END //
+
 DELIMITER ;
 
-CALL GenerateBillingStatement(1);
+CALL GenerateBillingStatements(1);
+
 
 -- PROCEDURE 4: Transfers a patient from their current room to a new room, updating the RoomsAndWards table accordingly
 
