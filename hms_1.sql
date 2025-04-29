@@ -1548,10 +1548,11 @@ ORDER BY m.expiry_date ASC;
 
 -- SIMPLE QUERY 6: GET TOTAL OUTSTANDING DUES / (Finance and Billing)
 SELECT SUM(total_amount - paid_amount) AS total_due FROM BillingAndPayments WHERE payment_status != 'Paid';
-
+-- To review patient's full background before making visits and treatment decisions
 
 -- COMPLEX QUERIES
 -- Complex Query 1: [For Doctors] Fetch All Patients with Their Medical History and Assigned Rooms
+ 
 SELECT 
     p.name AS PatientName,
     p.email AS PatientEmail,
@@ -1714,6 +1715,7 @@ GROUP BY i.ProviderName
 ORDER BY TotalBilled DESC
 LIMIT 5;
 
+-- Quickly generate a list of patients who owe money — useful for reminders or financial follow-ups.
 -- Complex Query 10: LIST PATIENTS WITH PENDING PAYMENTS AND OUTSTANDING DUES / (Finance and Billing)
 SELECT p.email AS PatientEmail, 
        p.name AS PatientName, 
