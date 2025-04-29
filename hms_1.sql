@@ -1699,14 +1699,13 @@ FROM Patient p
 JOIN BillingAndPayments b ON p.email = b.patient_id
 WHERE b.payment_status = 'Pending';
 
--- Complex Query 11: GET MEDICINE STOCK DETAILS WITH LOW INVENTORY / (Inventory Management)
-SELECT m.medicine_id, 
-       m.medicine_name, 
-       m.quantity, 
-       m.expiry_date
-FROM MedicineInventory m
-WHERE m.quantity < 20
-ORDER BY m.expiry_date ASC;
+-- Complex Query 11: RETRIEVE BOTH OCCUPIED AND UNOCCUPIED ROOMS WITH ASSIGNED PATIENTS / (Hospital Admin/Patient Management)
+SELECT r.RoomID, 
+       r.RoomType, 
+       r.AvailabilityStatus,
+       IF(p.name IS NULL, 'Unassigned', p.name) AS PatientName
+FROM RoomsAndWards r
+LEFT JOIN Patient p ON r.AssignedPatientID = p.email;
 
 -- Complex Query 12: RETRIEVE PATIENT DETAILS WITH LATEST APPOINTMENT INFORMATION / (Patient Scheduling)
 SELECT p.email AS PatientEmail, 
