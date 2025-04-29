@@ -610,52 +610,67 @@ DELIMITER ;
 -- Input: doctor_email (VARCHAR)
 -- Output: DECIMAL(5,2) - Utilization percentage
 
+DELIMITER //
+
 CREATE FUNCTION GetDoctorUtilization(doctor_email VARCHAR(50))
 RETURNS DECIMAL(5,2)
 DETERMINISTIC
 BEGIN
-    -- Declare variables to store total scheduled and appointment minutes
-    DECLARE total_schedule_minutes INT;
-    DECLARE total_appointment_minutes INT;
+    -- Declare variables
+    DECLARE total_schedule_minutes INT DEFAULT 0;
+    DECLARE total_appointment_minutes INT DEFAULT 0;
+    DECLARE utilization DECIMAL(5,2);
 
-    -- Sum total minutes from schedule shifts assigned to the doctor
-    SELECT SUM(TIMESTAMPDIFF(MINUTE, starttime, endtime))
+    -- Calculate total scheduled minutes
+    SELECT IFNULL(SUM(TIMESTAMPDIFF(MINUTE, starttime, endtime)), 0)
     INTO total_schedule_minutes
     FROM Schedule
     JOIN DocsHaveSchedules ON Schedule.id = DocsHaveSchedules.sched
     WHERE DocsHaveSchedules.doctor = doctor_email;
 
-    -- Sum total minutes from appointments where doctor was involved
-    SELECT SUM(TIMESTAMPDIFF(MINUTE, starttime, endtime))
+    -- Calculate total appointment minutes
+    SELECT IFNULL(SUM(TIMESTAMPDIFF(MINUTE, starttime, endtime)), 0)
     INTO total_appointment_minutes
     FROM Appointment
     JOIN Diagnose ON Appointment.id = Diagnose.appt
     WHERE Diagnose.doctor = doctor_email;
 
-    -- Calculate and return utilization percentage
-    RETURN IFNULL((total_appointment_minutes / total_schedule_minutes) * 100, 0);
-END;
+    -- Prevent division by zero
+    IF total_schedule_minutes = 0 THEN
+        SET utilization = 0;
+    ELSE
+        SET utilization = (total_appointment_minutes / total_schedule_minutes) * 100;
+    END IF;
+
+    RETURN utilization;
+END //
+
+DELIMITER ;
 
 -- Function 8: Calculate total unpaid amount for a patient.
 -- Input: patient_email (VARCHAR)
 -- Output: DECIMAL(10,2) - Total outstanding balance
+
+DELIMITER //
 
 CREATE FUNCTION CalculateOutstandingBalance(patient_email VARCHAR(50))
 RETURNS DECIMAL(10,2)
 DETERMINISTIC
 BEGIN
     -- Declare a variable to store the total unpaid amount
-    DECLARE total_unpaid DECIMAL(10,2);
+    DECLARE total_unpaid DECIMAL(10,2) DEFAULT 0.00;
 
     -- Calculate the sum of (total_amount - paid_amount) for all unpaid or partially paid bills of the patient
-    SELECT SUM(total_amount - paid_amount)
+    SELECT IFNULL(SUM(total_amount - paid_amount), 0.00)
     INTO total_unpaid
     FROM BillingAndPayments
     WHERE patient_id = patient_email AND payment_status != 'Paid';
 
-    -- Return the unpaid amount, or 0 if null
-    RETURN IFNULL(total_unpaid, 0);
-END;
+    -- Return the unpaid amount
+    RETURN total_unpaid;
+END //
+
+DELIMITER ;
 
 -- TRIGGERS:- ----------------------------------
 
