@@ -228,36 +228,38 @@ CALL UpdateOrCreateInsuranceRecord('john.doe@example.com', 'Aetna', 'POL999999')
 -- Input:  patient_email VARCHAR(50): Email ID of the patient whose final bill is to be generated.
 -- Output: Prints total outstanding payment by the patient after considering insurance coverage.
 
+DELIMITER //
+
 CREATE PROCEDURE GenerateFinalBill(IN patient_email VARCHAR(50))
 BEGIN
-    -- Declare variable to store total unpaid amount
     DECLARE unpaid_total DECIMAL(10,2) DEFAULT 0;
+    DECLARE has_insurance INT DEFAULT 0;
 
-    -- Declare variable to store count of appointments covered by insurance
-    DECLARE insurance_covered_appointments INT DEFAULT 0;
-
-    -- Calculate total unpaid amount for patient
-    SELECT SUM(total_amount - paid_amount)
+    -- Step 1: Calculate total unpaid amount for the patient
+    SELECT IFNULL(SUM(total_amount - paid_amount), 0)
     INTO unpaid_total
     FROM BillingAndPayments
     WHERE patient_id = patient_email AND payment_status != 'Paid';
 
-    -- Count how many appointments are covered by insurance
+    -- Step 2: Check if the patient has an insurance record
     SELECT COUNT(*)
-    INTO insurance_covered_appointments
-    FROM Insurance i
-    JOIN Patient p ON p.email = i.PatientID
-    JOIN BillingAndPayments b ON b.patient_id = p.email
-    WHERE p.email = patient_email;
+    INTO has_insurance
+    FROM Insurance
+    WHERE PatientID = patient_email;
 
-    -- Apply a discount for insurance-covered appointments 
-    IF insurance_covered_appointments > 0 THEN
-        SET unpaid_total = unpaid_total * 0.8;  -- Applying 20% coverage from insurance
+    -- Step 3: Apply a 20% discount if insurance exists
+    IF has_insurance > 0 THEN
+        SET unpaid_total = unpaid_total * 0.8; -- Apply 20% discount
     END IF;
 
-    -- Return the final amount
+    -- Step 4: Return the final amount
     SELECT unpaid_total AS Final_Amount_To_Pay;
-END;
+END //
+
+DELIMITER ;
+
+-- Procedure Call
+CALL GenerateFinalBill('john.doe@example.com');
 
 -- PROCEDURE 8: DischargePatient
 -- Purpose: Handles full discharge of a patient, finalizes billing, frees assigned room.
@@ -265,19 +267,32 @@ END;
 -- Output: Updates payment status and room assignment.
 
 DELIMITER //
+
 CREATE PROCEDURE DischargePatient(IN patient_email VARCHAR(50))
 BEGIN
-    -- Mark all unpaid bills as Paid
+    -- Start a transaction (optional but professional)
+    START TRANSACTION;
+    
+    -- Step 1: Mark all unpaid bills as Paid
     UPDATE BillingAndPayments
-    SET payment_status = 'Paid', paid_amount = total_amount
+    SET payment_status = 'Paid',
+        paid_amount = total_amount
     WHERE patient_id = patient_email AND payment_status != 'Paid';
-
-    -- Set room as available for reuse
+    
+    -- Step 2: Set patient's assigned room as available
     UPDATE RoomsAndWards
-    SET AvailabilityStatus = 'Available', AssignedPatientID = NULL
+    SET AvailabilityStatus = 'Available',
+        AssignedPatientID = NULL
     WHERE AssignedPatientID = patient_email;
-END;
+    
+    -- Commit the transaction
+    COMMIT;
+    
+    -- Step 3: Display a message (optional but great for feedback)
+    SELECT CONCAT('Patient with email ', patient_email, ' has been successfully discharged.') AS Message;
+END //
 
+DELIMITER ;
 
 -- Example: Discharge the patient with email 'mike.patient@hospital.com'
 CALL DischargePatient('mike.patient@hospital.com');
