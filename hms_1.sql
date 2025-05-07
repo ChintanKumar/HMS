@@ -753,31 +753,21 @@ DELIMITER ;
 -- Trigger 4: Trigger to automatically update the payment_status in the BillingAndPayments table.
 
 DELIMITER //
-   CREATE TRIGGER UpdatePaymentStatus
-   AFTER UPDATE ON BillingAndPayments
-   FOR EACH ROW
-   BEGIN
-       IF NEW.paid_amount >= NEW.total_amount THEN
-           UPDATE BillingAndPayments
-           SET
-               payment_status = 'Paid'
-           WHERE
-               billing_id = NEW.billing_id;
-       ELSEIF NEW.paid_amount > 0 AND NEW.paid_amount < NEW.total_amount THEN
-           UPDATE BillingAndPayments
-           SET
-               payment_status = 'Partially Paid'
-           WHERE
-               billing_id = NEW.billing_id;
-       ELSE
-           UPDATE BillingAndPayments
-           SET
-               payment_status = 'Pending'
-           WHERE
-               billing_id = NEW.billing_id;
-       END IF;
-   END //
-   DELIMITER ;
+
+CREATE TRIGGER UpdatePaymentStatus
+BEFORE UPDATE ON BillingAndPayments
+FOR EACH ROW
+BEGIN
+    IF NEW.paid_amount >= NEW.total_amount THEN
+        SET NEW.payment_status = 'Paid';
+    ELSEIF NEW.paid_amount > 0 AND NEW.paid_amount < NEW.total_amount THEN
+        SET NEW.payment_status = 'Partially Paid';
+    ELSE
+        SET NEW.payment_status = 'Pending';
+    END IF;
+END //
+
+DELIMITER ;
 
 -- SACHIN'S WORK
 
@@ -864,6 +854,13 @@ DELIMITER ;
 -- Timing: AFTER UPDATE
 -- Table: BillingAndPayments
 
+CREATE TABLE PaymentLogs (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    billing_id INT NOT NULL,
+    change_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    note VARCHAR(255) NOT NULL,
+    FOREIGN KEY (billing_id) REFERENCES BillingAndPayments(billing_id) ON DELETE CASCADE
+);
 
 -- Trigger to log status changes to Paid
 DELIMITER $$
@@ -1963,62 +1960,89 @@ SELECT * FROM BillingAndPayments WHERE billing_id = 102;
 
 -- Test Trigger: after_emergency_insert_log_returning_patient
 -- First time – should not trigger log
-CALL AdmitEmergencyPatient('jane.doe@example.com', 'High fever', 'dr.james@example.com');
+CALL AdmitEmergencyPatient('john.doe@example.com', 'High fever', 'dr.james@example.com');
 
 -- Second time – should trigger log
-CALL AdmitEmergencyPatient('jane.doe@example.com', 'Dizziness', 'dr.james@example.com');
+CALL AdmitEmergencyPatient('john.doe@example.com', 'Dizziness', 'dr.james@example.com');
 
 -- Verify trigger log
-SELECT * FROM EmergencyVisitLog WHERE PatientID = 'jane.doe@example.com';
+SELECT * FROM EmergencyVisitLog WHERE PatientID = 'john.doe@example.com';
 
 -- Trigger 6: after_schedule_delete_cleanup_access
 -- Purpose: When a doctor’s schedule is removed, this trigger revokes their access to patient histories.
--- Why it matters: Ensures access control and maintains patient confidentiality.
 
--- Test Trigger: after_schedule_delete_cleanup_access
--- Step 1: Grant access to a doctor
-CALL AssignDoctorScheduleAndHistoryView('dr.miller@example.com', 3, 202);
+-- Step 1: Insert MedicalHistory first (so that history ID 36 exists)
+INSERT INTO MedicalHistory (id, date, conditions, surgeries, medication)
+VALUES (36, '2030-10-16', 'Hepatitis B', 'None', 'Medication A');
 
--- Step 2: Verify doctor has access
+INSERT INTO Doctor (email, password, name, gender)
+VALUES ('dr.miller@example.com', 'securepass123', 'Dr. Miller', 'Male');
+
+-- Step 2: Grant access to the doctor
+INSERT INTO DoctorViewsHistory (history, doctor)
+VALUES (36, 'dr.miller@example.com');
+
+-- Step 3: Assign a schedule to the doctor
+INSERT INTO DocsHaveSchedules (sched, doctor)
+VALUES (3, 'dr.miller@example.com');
+
+-- Step 4: Verify doctor has access
 SELECT * FROM DoctorViewsHistory WHERE doctor = 'dr.miller@example.com';
 
--- Step 3: Remove schedule (will trigger automatic access removal)
-DELETE FROM DocsHaveSchedules WHERE doctor = 'dr.miller@example.com' AND sched = 3;
+-- Step 5: Remove schedule (will trigger automatic access removal)
+DELETE FROM DocsHaveSchedules
+WHERE doctor = 'dr.miller@example.com' AND sched = 3;
 
--- Step 4: Verify access is revoked
+-- Step 6: Verify access is revoked
 SELECT * FROM DoctorViewsHistory WHERE doctor = 'dr.miller@example.com';
 
 -- VIYANK'S WORK
 
--- Trigger 7:
--- BeforeInsert_BillingValidation
--- Purpose: Prevent inserting billing records where paid_amount exceeds total_amount.
--- Timing: BEFORE INSERT
--- Table: BillingAndPayments
+-- Step 0: Insert patient if not already present
+INSERT IGNORE INTO Patient (email, password, name, address, gender)
+VALUES ('alice.jones@example.com', 'securepass', 'Alice Jones', '123 Main St', 'Female');
 
--- Trigger to ensure no overpayment occurs in BillingAndPayments
+-- Step 1: Insert a valid appointment
+-- ID 37 will be used in BillingAndPayments
+INSERT INTO Appointment (id, date, starttime, endtime)
+VALUES (37, '2024-08-10', '10:00:00', '10:30:00')
+ON DUPLICATE KEY UPDATE date = VALUES(date);  -- Allows rerunning the script
 
--- This should FAIL because paid_amount > total_amount
-INSERT INTO BillingAndPayments (billing_id, paid_amount, total_amount, payment_status)
-VALUES (1, 120, 100, 'Pending');
--- This should SUCCEED
-INSERT INTO BillingAndPayments (billing_id, paid_amount, total_amount, payment_status)
-VALUES (2, 80, 100, 'Pending');
+-- Step 2: Trigger 7 Test - OVERPAYMENT (Should Fail)
+-- Uncomment to test rejection
+/*
+INSERT INTO BillingAndPayments (
+    patient_id, appointment_id, total_amount,
+    paid_amount, payment_method, payment_status
+)
+VALUES (
+    'alice.jones@example.com', 37, 100.00,
+    120.00, 'Card', 'Pending'
+);
+*/
 
---  Trigger 8: AfterUpdate_PaymentCompletedLog
--- Purpose: Log when a payment status changes to 'Paid'.
--- Timing: AFTER UPDATE
--- Table: BillingAndPayments
+-- Step 3: Trigger 7 Test - VALID PAYMENT (Should Succeed)
+-- Check if this billing already exists to avoid duplicate entry
+DELETE FROM BillingAndPayments WHERE billing_id = 37;
 
+INSERT INTO BillingAndPayments (
+    billing_id, patient_id, appointment_id, total_amount,
+    paid_amount, payment_method, payment_status
+)
+VALUES (
+    37, 'alice.jones@example.com', 37, 100.00,
+    80.00, 'Card', 'Pending'
+);
 
--- Trigger to log status changes to Paid
+-- Step 4: Trigger 8 Test - LOG PAYMENT STATUS CHANGE
 
--- Insert initial billing record
-INSERT INTO BillingAndPayments (billing_id, paid_amount, total_amount, payment_status)
-VALUES (3, 50, 100, 'Pending');
--- Update to trigger the AFTER UPDATE trigger
+-- Update payment_status to 'Paid' (should trigger the log insert)
 UPDATE BillingAndPayments
 SET payment_status = 'Paid'
-WHERE billing_id = 3;
--- should show a log entry is created
-SELECT * FROM PaymentLogs;
+WHERE billing_id = 37;
+
+-- Step 5: View result of Trigger 8
+SELECT * FROM PaymentLogs WHERE billing_id = 37;
+
+-- Optional: View final Billing state
+SELECT * FROM BillingAndPayments WHERE billing_id = 37;
