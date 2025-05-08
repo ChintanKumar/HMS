@@ -505,60 +505,6 @@ BEGIN
 END //
 DELIMITER ;
 
--- FUNCTION 4: Function to calculate the total cost of medicines prescribed to a patient during a specific appointment 
-
-DELIMITER //
-CREATE FUNCTION CalculatePrescribedMedicineCost(
-    p_patient_email VARCHAR(50),
-    p_appointment_id INT
-) RETURNS DECIMAL(10, 2)
-DETERMINISTIC
-BEGIN
-    DECLARE total_medicine_cost DECIMAL(10, 2);
-
-    -- Initialize the total cost
-    SET total_medicine_cost = 0.00;
-
-    -- Select the patient's prescription from the Diagnose table for the given appointment
-    SELECT
-        GROUP_CONCAT(prescription) INTO @prescriptions
-    FROM
-        Diagnose
-    WHERE
-        appt = p_appointment_id;
-
-    -- Check if there are any prescriptions
-    IF @prescriptions IS NOT NULL THEN
-        -- Split the prescription string into individual medicines (assuming they are comma-separated)
-        SET @prescription_count = LENGTH(@prescriptions) - LENGTH(REPLACE(@prescriptions, ',', '')) + 1;
-        SET @i = 1;
-
-        WHILE @i <= @prescription_count DO
-            -- Extract each medicine name
-            SET @medicine_name = TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(@prescriptions, ',', @i), ',', -1));
-
-            -- Get the unit price of the medicine from the MedicineInventory table
-            SELECT
-                unit_price INTO @medicine_price
-            FROM
-                MedicineInventory
-            WHERE
-                medicine_name = @medicine_name;
-
-            -- If the medicine is found in the inventory, add its price to the total cost
-            IF @medicine_price IS NOT NULL THEN
-                SET total_medicine_cost = total_medicine_cost + @medicine_price;
-            END IF;
-
-            SET @i = @i + 1;
-        END WHILE;
-    END IF;
-
-    -- Return the total cost of the prescribed medicines
-    RETURN total_medicine_cost;
-END //
-DELIMITER ;
-
 -- SACHIN'S WORK
 
 -- Function 5: GetPatientEmergencyVisitCount
@@ -1524,15 +1470,6 @@ FROM Patient p
 JOIN BillingAndPayments bp ON p.email = bp.patient_id
 GROUP BY p.name;
 
--- SIMPLE QUERY 5: GET MEDICINE STOCK DETAILS WITH LOW INVENTORY / (Inventory Management)
-SELECT m.medicine_id, 
-       m.medicine_name, 
-       m.quantity, 
-       m.expiry_date
-FROM MedicineInventory m
-WHERE m.quantity < 20
-ORDER BY m.expiry_date ASC;
-
 -- SIMPLE QUERY 5.1: GET MEDICINE STOCK DETAILS WITH LOW INVENTORY / (Inventory Management)
 SELECT 
     m.medicine_id,
@@ -1712,17 +1649,6 @@ GROUP BY i.ProviderName
 ORDER BY TotalBilled DESC
 LIMIT 5;
 
--- Quickly generate a list of patients who owe money — useful for reminders or financial follow-ups.
--- Complex Query 10: LIST PATIENTS WITH PENDING PAYMENTS AND OUTSTANDING DUES / (Finance and Billing)
-SELECT p.email AS PatientEmail, 
-       p.name AS PatientName, 
-       b.total_amount, 
-       b.paid_amount, 
-       (b.total_amount - b.paid_amount) AS OutstandingAmount
-FROM Patient p
-JOIN BillingAndPayments b ON p.email = b.patient_id
-WHERE b.payment_status = 'Pending';
-
 -- Complex Query 10.1: LIST PATIENTS WITH PENDING PAYMENTS AND OUTSTANDING DUES / (Finance and Billing)
 SELECT 
     p.email AS PatientEmail,
@@ -1844,7 +1770,7 @@ SELECT CalculateBalance('alice.jones@example.com');
 
 -- FUNCTION 4: Function to calculate the total cost of medicines prescribed to a patient during a specific appointment 
 
-SELECT CalculatePrescribedMedicineCost('alice.jones@example.com', 102);
+-- SELECT CalculatePrescribedMedicineCost('alice.jones@example.com', 102);
 
 -- SACHIN'S WORK
 
@@ -1852,14 +1778,14 @@ SELECT CalculatePrescribedMedicineCost('alice.jones@example.com', 102);
 -- Purpose: Returns how many times a patient has been to the Emergency Room.
 -- Use Case: Helps flag frequent visitors, potentially for case management or alerts.
 
--- 👇 Sample SELECT using GetPatientEmergencyVisitCount
+-- Sample SELECT using GetPatientEmergencyVisitCount
 SELECT GetPatientEmergencyVisitCount('john.doe@example.com') AS EmergencyVisits;
 
 -- Function 6: IsInsuranceValid
 -- Purpose: Returns 'Yes' if a patient has valid insurance; 'No' otherwise.
 -- Use Case: Useful inside conditions for billing workflows or eligibility checks.
 
--- 👇 Sample SELECT using IsInsuranceValid
+-- Sample SELECT using IsInsuranceValid
 SELECT IsInsuranceValid('john.doe@example.com') AS InsuranceStatus;
 
 -- VIYANK'S WORK
@@ -1870,7 +1796,7 @@ SELECT IsInsuranceValid('john.doe@example.com') AS InsuranceStatus;
 -- Output: DECIMAL(5,2) - Utilization percentage
 
 
-SELECT GetDoctorUtilization('dr.jane@hospital.com') AS utilization_percentage;
+SELECT GetDoctorUtilization('dr.amy@example.com') AS utilization_percentage;
 
 -- Function 8: Calculate total unpaid amount for a patient.
 -- Input: patient_email (VARCHAR)
@@ -1944,11 +1870,11 @@ WHERE id = 105;
    
       UPDATE BillingAndPayments
    SET
-       paid_amount = 30.00
+       paid_amount = 50.00
    WHERE
-       billing_id = 102;
+       billing_id = 30;
        
-SELECT * FROM BillingAndPayments WHERE billing_id = 102;
+SELECT * FROM BillingAndPayments WHERE billing_id = 30;
 
 -- SACHIN'S WORK
 
@@ -1971,29 +1897,30 @@ SELECT * FROM EmergencyVisitLog WHERE PatientID = 'john.doe@example.com';
 -- Trigger 6: after_schedule_delete_cleanup_access
 -- Purpose: When a doctor’s schedule is removed, this trigger revokes their access to patient histories.
 
--- Step 1: Insert MedicalHistory first (so that history ID 36 exists)
+-- Step 1: Insert MedicalHistory
 INSERT INTO MedicalHistory (id, date, conditions, surgeries, medication)
 VALUES (36, '2030-10-16', 'Hepatitis B', 'None', 'Medication A');
 
+-- Step 2: Insert doctor (make sure it doesn't already exist)
 INSERT INTO Doctor (email, password, name, gender)
 VALUES ('dr.miller@example.com', 'securepass123', 'Dr. Miller', 'Male');
 
--- Step 2: Grant access to the doctor
+-- Step 3: Grant access to medical history
 INSERT INTO DoctorViewsHistory (history, doctor)
 VALUES (36, 'dr.miller@example.com');
 
--- Step 3: Assign a schedule to the doctor
+-- Step 4: Assign schedule to doctor
 INSERT INTO DocsHaveSchedules (sched, doctor)
 VALUES (3, 'dr.miller@example.com');
 
--- Step 4: Verify doctor has access
+-- Step 5: Confirm doctor has access
 SELECT * FROM DoctorViewsHistory WHERE doctor = 'dr.miller@example.com';
 
--- Step 5: Remove schedule (will trigger automatic access removal)
+-- Step 6: Remove schedule (this should trigger cleanup of access)
 DELETE FROM DocsHaveSchedules
 WHERE doctor = 'dr.miller@example.com' AND sched = 3;
 
--- Step 6: Verify access is revoked
+-- Step 7: Confirm access is revoked
 SELECT * FROM DoctorViewsHistory WHERE doctor = 'dr.miller@example.com';
 
 -- VIYANK'S WORK
@@ -2043,6 +1970,3 @@ WHERE billing_id = 37;
 
 -- Step 5: View result of Trigger 8
 SELECT * FROM PaymentLogs WHERE billing_id = 37;
-
--- Optional: View final Billing state
-SELECT * FROM BillingAndPayments WHERE billing_id = 37;
